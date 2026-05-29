@@ -37,12 +37,8 @@ async function getUniqueTrendToPublish() {
   const allTrends = await db.getAllTrends();
   
   // Query all unique trend IDs that have already been posted
-  const postedIds = await new Promise((resolve, reject) => {
-    db.db.all('SELECT DISTINCT trendId FROM posts', [], (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows.map(r => r.trendId));
-    });
-  });
+  const postedIds = await db.getPostedTrendIds();
+
 
   // Find a trend from the fetched daily trends that has not been posted
   const availableTrend = allTrends.find(t => !postedIds.includes(t.id));

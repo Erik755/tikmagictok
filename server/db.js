@@ -130,6 +130,13 @@ const getAllMetrics = () => new Promise((resolve, reject) => {
   });
 });
 
+const getPostedTrendIds = () => new Promise((resolve, reject) => {
+  db.all('SELECT DISTINCT trendId FROM posts', [], (err, rows) => {
+    if (err) reject(err);
+    else resolve(rows.map(r => r.trendId));
+  });
+});
+
 module.exports = {
   getAllTrends,
   getTrendById,
@@ -138,5 +145,7 @@ module.exports = {
   getLatestSettings,
   updateSettings,
   recordMetrics,
-  getAllMetrics
+  getAllMetrics,
+  getPostedTrendIds
 };
+
