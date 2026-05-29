@@ -17,6 +17,30 @@ const COLOR_SCHEMES = {
   entretenimiento: { accent: '#FF4500', font: 'orange' } // Neon orange
 };
 
+// Thematic headlines and descriptions for deep trend context matching
+const THEMATIC_TEXTS = {
+  tecnologia: {
+    title: 'TECNOLOGIA REVELADA',
+    desc: 'Descubriendo el codigo del futuro'
+  },
+  motivacion: {
+    title: 'MINDSET EXTREMO',
+    desc: 'Llegando al limite del potencial'
+  },
+  comedia: {
+    title: 'HUMOR AL MAXIMO',
+    desc: 'Reir para no dejar de evolucionar'
+  },
+  educacion: {
+    title: 'DATO INCREIBLE',
+    desc: 'Conocimiento autonomo al instante'
+  },
+  entretenimiento: {
+    title: 'ESTILO DE LIFESTYLE',
+    desc: 'Disfrutando del contenido diario'
+  }
+};
+
 /**
  * Maps a trend hashtag to one of the five specific categories
  * and returns the corresponding premium background template path.
@@ -149,9 +173,10 @@ async function createVideo(trend) {
       const fontFile = 'C:/Windows/Fonts/arial.ttf';
       const boldFont = 'C:/Windows/Fonts/arialbd.ttf';
       
-      // Determine colors based on category
+      // Determine colors and headlines based on category
       const scheme = COLOR_SCHEMES[thematicBg.category] || COLOR_SCHEMES.entretenimiento;
       const accentColor = scheme.accent;
+      const thematicTexts = THEMATIC_TEXTS[thematicBg.category] || THEMATIC_TEXTS.entretenimiento;
 
       // Build premium multi-layer vertical design filters
       const filters = [
@@ -179,15 +204,20 @@ async function createVideo(trend) {
 
         // --- Main Trend / Hashtag (center) ---
         `drawtext=fontfile='${boldFont}':text='#${safeHashtag}':fontcolor=white:fontsize=64:x=(w-text_w)/2:y=(h/2)-80:box=1:boxcolor=0x000000EE:boxborderw=20`,
-        `drawtext=fontfile='${boldFont}':text='TENDENCIA ACTIVA':fontcolor=${accentColor}:fontsize=20:x=(w-text_w)/2:y=(h/2)-130:box=1:boxcolor=0x00000099:boxborderw=6`,
+        
+        // Dynamically customized topic headline (e.g. TECNOLOGIA REVELADA)
+        `drawtext=fontfile='${boldFont}':text='${thematicTexts.title}':fontcolor=${accentColor}:fontsize=20:x=(w-text_w)/2:y=(h/2)-130:box=1:boxcolor=0x00000099:boxborderw=6`,
+
+        // Dynamically customized topic description (e.g. Descubriendo el codigo del futuro)
+        `drawtext=fontfile='${fontFile}':text='${thematicTexts.desc}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=(h/2)+15:box=1:boxcolor=0x000000BB:boxborderw=8`,
 
         // --- Interactive Button Mock (below center) ---
-        `drawbox=x=150:y=730:w=420:h=64:color=${accentColor.replace('#', '0x')}FF:t=fill`,
-        `drawtext=fontfile='${boldFont}':text='[ Generate & Post ]':fontcolor=0x111111:fontsize=30:x=(w-text_w)/2:y=746`,
-        `drawbox=x=148:y=728:w=424:h=68:color=0xFFFFFFDD:t=2`, // white border highlight
+        `drawbox=x=150:y=760:w=420:h=64:color=${accentColor.replace('#', '0x')}FF:t=fill`,
+        `drawtext=fontfile='${boldFont}':text='[ Generate & Post ]':fontcolor=0x111111:fontsize=30:x=(w-text_w)/2:y=776`,
+        `drawbox=x=148:y=758:w=424:h=68:color=0xFFFFFFDD:t=2`, // white border highlight
 
         // Extra details for buttons
-        `drawtext=fontfile='${fontFile}':text='Presiona el boton para repetir el proceso':fontcolor=white:fontsize=18:x=(w-text_w)/2:y=815:box=1:boxcolor=0x000000AA:boxborderw=5`,
+        `drawtext=fontfile='${fontFile}':text='Presiona el boton para repetir el proceso':fontcolor=white:fontsize=18:x=(w-text_w)/2:y=845:box=1:boxcolor=0x000000AA:boxborderw=5`,
 
         // --- Follow CTA (bottom area) ---
         `drawbox=x=0:y=950:w=720:h=110:color=0x000000AA:t=fill`,
@@ -200,6 +230,7 @@ async function createVideo(trend) {
         // --- App download link (very bottom) ---
         `drawtext=fontfile='${fontFile}':text='Descarga la app en':fontcolor=0xAAAAAAAA:fontsize=18:x=(w-text_w)/2:y=1150`,
         `drawtext=fontfile='${boldFont}':text='tikmagictok.app':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=1176:box=1:boxcolor=0x000000AA:boxborderw=6`,
+
 
         // Watermark
         `drawtext=fontfile='${fontFile}':text='TikMagicTok AI System':fontcolor=0xFFFFFF44:fontsize=14:x=w-text_w-15:y=h-25`
