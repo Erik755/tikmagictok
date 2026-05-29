@@ -114,16 +114,18 @@ function getThematicBackground(hashtag) {
 function getRandomKineticMotion(duration) {
   const motions = [
     // Motion 1: Horizontal slow pan left-to-right
-    `crop=612:1088:108*(t/${duration}):96,scale=720:1280`,
+    `scale=800:1422,crop=720:1280:'80*t/${duration}':71`,
     // Motion 2: Vertical slow pan down
-    `crop=612:1088:54:192*(t/${duration}),scale=720:1280`,
+    `scale=800:1422,crop=720:1280:40:'142*t/${duration}'`,
     // Motion 3: Smooth wave breathing pan (orbital motion)
-    `crop=612:1088:'54+40*sin(2*3.14159*t/8)':'96+60*cos(2*3.14159*t/12)',scale=720:1280`,
+    `scale=800:1422,crop=720:1280:'40*(1+sin(2*3.14159*t/10))':'71*(1+cos(2*3.14159*t/12))'`,
     // Motion 4: Diagonal slow scroll top-left to bottom-right
-    `crop=612:1088:108*(t/${duration}):192*(t/${duration}),scale=720:1280`,
+    `scale=800:1422,crop=720:1280:'80*t/${duration}':'142*t/${duration}'`,
     // Motion 5: Diagonal reverse scroll bottom-right to top-left
-    `crop=612:1088:108*(1-t/${duration}):192*(1-t/${duration}),scale=720:1280`
+    `scale=800:1422,crop=720:1280:'80*(1-t/${duration})':'142*(1-t/${duration})'`
   ];
+
+
   const selectedIndex = Math.floor(Math.random() * motions.length);
   return {
     expression: motions[selectedIndex],
