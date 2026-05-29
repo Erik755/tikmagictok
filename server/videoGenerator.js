@@ -114,15 +114,15 @@ function getThematicBackground(hashtag) {
 function getRandomKineticMotion(duration) {
   const motions = [
     // Motion 1: Horizontal slow pan left-to-right
-    `crop=w='in_w*0.85':h='in_h*0.85':x='(in_w-out_w)*(t/${duration})':y='(in_h-out_h)/2',scale=720:1280`,
-    // Motion 2: Slow diagonal zoom-in
-    `crop=w='in_w*(1-0.12*t/${duration})':h='in_h*(1-0.12*t/${duration})':x='(in_w-out_w)*(t/${duration})':y='(in_h-out_h)*(t/${duration})',scale=720:1280`,
+    `crop=612:1088:108*(t/${duration}):96,scale=720:1280`,
+    // Motion 2: Vertical slow pan down
+    `crop=612:1088:54:192*(t/${duration}),scale=720:1280`,
     // Motion 3: Smooth wave breathing pan (orbital motion)
-    `crop=w='in_w*0.85':h='in_h*0.85':x='(in_w-out_w)/2 + (in_w*0.06)*sin(2*3.14159*t/8)':y='(in_h-out_h)/2 + (in_h*0.06)*cos(2*3.14159*t/12)',scale=720:1280`,
-    // Motion 4: Vertical slow pan down
-    `crop=w='in_w*0.88':h='in_h*0.88':x='(in_w-out_w)/2':y='(in_h-out_h)*(t/${duration})',scale=720:1280`,
-    // Motion 5: Diagonal zoom-out from top-right
-    `crop=w='in_w*(0.85+0.15*t/${duration})':h='in_h*(0.85+0.15*t/${duration})':x='(in_w-out_w)*(1-t/${duration})':y='(in_h-out_h)*(1-t/${duration})',scale=720:1280`
+    `crop=612:1088:'54+40*sin(2*3.14159*t/8)':'96+60*cos(2*3.14159*t/12)',scale=720:1280`,
+    // Motion 4: Diagonal slow scroll top-left to bottom-right
+    `crop=612:1088:108*(t/${duration}):192*(t/${duration}),scale=720:1280`,
+    // Motion 5: Diagonal reverse scroll bottom-right to top-left
+    `crop=612:1088:108*(1-t/${duration}):192*(1-t/${duration}),scale=720:1280`
   ];
   const selectedIndex = Math.floor(Math.random() * motions.length);
   return {
@@ -130,6 +130,7 @@ function getRandomKineticMotion(duration) {
     id: selectedIndex + 1
   };
 }
+
 
 /**
  * Creates a short TikTok-style video for a given trend.
