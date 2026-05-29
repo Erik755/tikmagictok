@@ -7,6 +7,7 @@ const fs = require('fs');
 ffmpeg.setFfmpegPath(ffmpegStatic);
 
 const db = require('./db');
+const aiService = require('./aiService');
 
 // Color accent mappings per category for modern look
 const COLOR_SCHEMES = {
@@ -15,30 +16,6 @@ const COLOR_SCHEMES = {
   comedia: { accent: '#FF1493', font: 'deeppink' },    // Neon pink
   educacion: { accent: '#FFD700', font: 'gold' },      // Neon gold
   entretenimiento: { accent: '#FF4500', font: 'orange' } // Neon orange
-};
-
-// Thematic headlines and descriptions for deep trend context matching
-const THEMATIC_TEXTS = {
-  tecnologia: {
-    title: 'TECNOLOGIA REVELADA',
-    desc: 'Descubriendo el codigo del futuro'
-  },
-  motivacion: {
-    title: 'MINDSET EXTREMO',
-    desc: 'Llegando al limite del potencial'
-  },
-  comedia: {
-    title: 'HUMOR AL MAXIMO',
-    desc: 'Reir para no dejar de evolucionar'
-  },
-  educacion: {
-    title: 'DATO INCREIBLE',
-    desc: 'Conocimiento autonomo al instante'
-  },
-  entretenimiento: {
-    title: 'ESTILO DE LIFESTYLE',
-    desc: 'Disfrutando del contenido diario'
-  }
 };
 
 /**
@@ -124,15 +101,12 @@ function getRandomKineticMotion(duration) {
     // Motion 5: Diagonal reverse scroll bottom-right to top-left
     `scale=800:1422,crop=720:1280:'80*(1-t/${duration})':'142*(1-t/${duration})'`
   ];
-
-
   const selectedIndex = Math.floor(Math.random() * motions.length);
   return {
     expression: motions[selectedIndex],
     id: selectedIndex + 1
   };
 }
-
 
 /**
  * Creates a short TikTok-style video for a given trend.
@@ -155,6 +129,9 @@ async function createVideo(trend) {
       console.log(`[Video Generator] Trend #${trend.hashtag} mapped to category: ${thematicBg.category}`);
       console.log(`[Video Generator] Using background template: ${path.basename(thematicBg.path)}`);
 
+      // Generate highly detailed thematic content using our Llama-3 AI service!
+      const aiContent = await aiService.generateThematicContent(trend.hashtag);
+
       // Select a randomized kinetic pan/zoom motion
       const kinetic = getRandomKineticMotion(duration);
       console.log(`[Video Generator] Applying randomized background motion pattern #${kinetic.id}`);
@@ -176,10 +153,14 @@ async function createVideo(trend) {
       const fontFile = 'C:/Windows/Fonts/arial.ttf';
       const boldFont = 'C:/Windows/Fonts/arialbd.ttf';
       
-      // Determine colors and headlines based on category
-      const scheme = COLOR_SCHEMES[thematicBg.category] || COLOR_SCHEMES.entretenimiento;
+      // Determine colors based on category
+      const scheme = COLOR_SCHEMES[aiContent.category] || COLOR_SCHEMES.entretenimiento;
       const accentColor = scheme.accent;
-      const thematicTexts = THEMATIC_TEXTS[thematicBg.category] || THEMATIC_TEXTS.entretenimiento;
+
+      // Escape dynamic text outputs for safe FFmpeg filter processing
+      const safeTitle = aiContent.title.replace(/'/g, "\\\\'").replace(/:/g, '\\:');
+      const safeHook = aiContent.hook.replace(/'/g, "\\\\'").replace(/:/g, '\\:');
+      const safeFact = aiContent.fact.replace(/'/g, "\\\\'").replace(/:/g, '\\:');
 
       // Build premium multi-layer vertical design filters
       const filters = [
@@ -206,13 +187,16 @@ async function createVideo(trend) {
         `drawbox=x=180:y=350:w=360:h=2:color=${accentColor.replace('#', '0x')}88:t=fill`,
 
         // --- Main Trend / Hashtag (center) ---
-        `drawtext=fontfile='${boldFont}':text='#${safeHashtag}':fontcolor=white:fontsize=64:x=(w-text_w)/2:y=(h/2)-80:box=1:boxcolor=0x000000EE:boxborderw=20`,
+        `drawtext=fontfile='${boldFont}':text='#${safeHashtag}':fontcolor=white:fontsize=60:x=(w-text_w)/2:y=(h/2)-70:box=1:boxcolor=0x000000EE:boxborderw=18`,
         
-        // Dynamically customized topic headline (e.g. TECNOLOGIA REVELADA)
-        `drawtext=fontfile='${boldFont}':text='${thematicTexts.title}':fontcolor=${accentColor}:fontsize=20:x=(w-text_w)/2:y=(h/2)-130:box=1:boxcolor=0x00000099:boxborderw=6`,
+        // Dynamically customized topic headline (Llama-3 AI / NLP)
+        `drawtext=fontfile='${boldFont}':text='${safeTitle}':fontcolor=${accentColor}:fontsize=22:x=(w-text_w)/2:y=(h/2)-120:box=1:boxcolor=0x000000AA:boxborderw=6`,
 
-        // Dynamically customized topic description (e.g. Descubriendo el codigo del futuro)
-        `drawtext=fontfile='${fontFile}':text='${thematicTexts.desc}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=(h/2)+15:box=1:boxcolor=0x000000BB:boxborderw=8`,
+        // Dynamic viral hook (Llama-3 AI / NLP)
+        `drawtext=fontfile='${fontFile}':text='${safeHook}':fontcolor=white:fontsize=20:x=(w-text_w)/2:y=(h/2)+10:box=1:boxcolor=0x00000099:boxborderw=6`,
+
+        // Dynamic mind-blowing fact (Llama-3 AI / NLP)
+        `drawtext=fontfile='${fontFile}':text='${safeFact}':fontcolor=yellow:fontsize=18:x=(w-text_w)/2:y=(h/2)+50:box=1:boxcolor=0x000000AA:boxborderw=5`,
 
         // --- Interactive Button Mock (below center) ---
         `drawbox=x=150:y=760:w=420:h=64:color=${accentColor.replace('#', '0x')}FF:t=fill`,
@@ -233,7 +217,6 @@ async function createVideo(trend) {
         // --- App download link (very bottom) ---
         `drawtext=fontfile='${fontFile}':text='Descarga la app en':fontcolor=0xAAAAAAAA:fontsize=18:x=(w-text_w)/2:y=1150`,
         `drawtext=fontfile='${boldFont}':text='tikmagictok.app':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=1176:box=1:boxcolor=0x000000AA:boxborderw=6`,
-
 
         // Watermark
         `drawtext=fontfile='${fontFile}':text='TikMagicTok AI System':fontcolor=0xFFFFFF44:fontsize=14:x=w-text_w-15:y=h-25`
