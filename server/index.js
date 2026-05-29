@@ -2,6 +2,25 @@
 require('dotenv').config();
 const express = require('express');
 
+// Global console log buffer for real-time external page streaming
+global.serverLogs = [];
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = (...args) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+  originalLog(...args);
+  global.serverLogs.push({ time: new Date().toLocaleTimeString(), text: msg, type: 'info' });
+  if (global.serverLogs.length > 60) global.serverLogs.shift();
+};
+
+console.error = (...args) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+  originalError(...args);
+  global.serverLogs.push({ time: new Date().toLocaleTimeString(), text: msg, type: 'error' });
+  if (global.serverLogs.length > 60) global.serverLogs.shift();
+};
+
 // Global error handlers to prevent server crashes
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err.message);
@@ -23,6 +42,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
 
 // OAuth routes
 app.get('/auth/login', tiktokApi.login);
@@ -103,7 +123,12 @@ app.get('/api/simulation/status', (req, res) => {
   res.json({ active: isAutoPublishRunning });
 });
 
+app.get('/api/logs', (req, res) => {
+  res.json(global.serverLogs);
+});
+
 app.post('/api/simulation/toggle', async (req, res) => {
+
   const { active } = req.body;
   
   if (active) {

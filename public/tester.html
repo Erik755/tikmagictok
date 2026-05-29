@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikMagicTok • Cyberpunk Controller</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #080b11;
+      --bg-gradient: radial-gradient(circle at 50% 50%, #111728 0%, #080b11 100%);
+      --card-bg: rgba(18, 25, 41, 0.45);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-neon: #ff0050; /* TikTok Pink */
+      --accent-aqua: #00f2fe; /* TikTok Cyan */
+      --accent-purple: #8a2be2;
+      --accent-glow: rgba(255, 0, 80, 0.35);
+      --text-white: #ffffff;
+      --text-muted: #8492a6;
+      --success: #00ff87;
+      --warning: #ffb703;
+      --error: #ff4d6d;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-color);
+      background-image: var(--bg-gradient);
+      color: var(--text-white);
+      min-height: 100vh;
+      padding: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    /* Premium Header */
+    header {
+      width: 100%;
+      max-width: 1300px;
+      margin-bottom: 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(11, 17, 30, 0.6);
+      backdrop-filter: blur(25px);
+      border: 1px solid var(--card-border);
+      padding: 1.5rem 2.5rem;
+      border-radius: 1.25rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 2.2rem;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent-neon), var(--accent-aqua));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    h1::after {
+      content: 'TESTER';
+      font-size: 0.7rem;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-neon));
+      color: #fff;
+      -webkit-text-fill-color: #fff;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+
+    .badge-connection {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .pulse {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--warning);
+      box-shadow: 0 0 8px var(--warning);
+      animation: pulsate 1.5s infinite alternate;
+    }
+
+    .pulse.active {
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    @keyframes pulsate {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      100% { transform: scale(1.1); opacity: 1; }
+    }
+
+    /* Grid Layout */
+    .grid {
+      width: 100%;
+      max-width: 1300px;
+      display: grid;
+      grid-template-columns: 1.40fr 1fr;
+      gap: 2.5rem;
+    }
+
+    @media (max-width: 968px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Sleek Cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 1.5rem;
+      padding: 2.25rem;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Neon highlights */
+    .card-pilot {
+      border: 1px solid rgba(255, 0, 80, 0.25);
+      box-shadow: 0 0 25px rgba(255, 0, 80, 0.06);
+    }
+
+    .card h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.75rem;
+    }
+
+    /* Autopilot Switch */
+    .switch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 1.25rem 1.5rem;
+      border-radius: 1rem;
+    }
+
+    .switch-info p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 58px;
+      height: 30px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(255, 255, 255, 0.08);
+      transition: .3s cubic-bezier(0.16, 1, 0.3, 1);
+      border-radius: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s cubic-bezier(0.16, 1, 0.3, 1);
+      border-radius: 50%;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-neon);
+      border-color: transparent;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(28px);
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-muted);
+    }
+
+    .status-badge.active {
+      background: rgba(0, 255, 135, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(0, 255, 135, 0.3);
+      box-shadow: 0 0 8px rgba(0, 255, 135, 0.15);
+    }
+
+    /* Trends List */
+    .trend-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .trend-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 1rem 1.25rem;
+      border-radius: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.25s ease;
+    }
+
+    .trend-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+      transform: translateX(4px);
+    }
+
+    .trend-name {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .trend-category {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+      display: block;
+    }
+
+    /* Buttons */
+    button {
+      cursor: pointer;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-action {
+      background: rgba(0, 242, 254, 0.1);
+      color: var(--accent-aqua);
+      border: 1px solid rgba(0, 242, 254, 0.2);
+    }
+
+    .btn-action:hover {
+      background: linear-gradient(135deg, var(--accent-neon), var(--accent-aqua));
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 4px 15px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-sync {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text-white);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+    }
+
+    .btn-sync:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Live Logs console panel */
+    .log-panel {
+      background: #04060b;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      height: 100%;
+      min-height: 480px;
+      max-height: 520px;
+      overflow-y: auto;
+      box-shadow: inset 0 4px 15px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .log-row {
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      padding-bottom: 0.35rem;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .log-time {
+      color: #5c6a7e;
+      margin-right: 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .log-text.info {
+      color: #00ffcc;
+    }
+
+    .log-text.error {
+      color: #ff3366;
+      font-weight: 500;
+    }
+
+    .log-text.success {
+      color: #00ff66;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>TikMagicTok</h1>
+    <div class="badge-connection">
+      <span class="pulse" id="statusPulse"></span>
+      <span id="statusText">Conectando a localhost:3000...</span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- Left Column: Autopilot and Trends -->
+    <div style="display: flex; flex-direction: column; gap: 2.5rem;">
+      
+      <!-- Autopilot panel -->
+      <div class="card card-pilot">
+        <div class="switch-row">
+          <div class="switch-info">
+            <h2 style="border: none; padding: 0; margin: 0; color: var(--accent-neon);">🤖 Simulación Auto-Piloto</h2>
+            <p>Genera y publica videos cada 30 minutos sin repetir ningún trend.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span id="simulationBadge" class="status-badge">Inactivo</span>
+            <label class="switch">
+              <input type="checkbox" id="simulationToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trends catalog panel -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.75rem;">
+          <h2 style="border: none; padding: 0; margin: 0;">🔥 Tendencias Disponibles</h2>
+          <button id="syncBtn" class="btn-sync">🔄 Sincronizar Feed</button>
+        </div>
+        <ul id="trendsList" class="trend-list">
+          <li class="trend-item" style="color: var(--text-muted);">Cargando tendencias...</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Live Console Log streaming -->
+    <div class="card" style="grid-column: span 1;">
+      <h2>📋 Consola de Servidor en Vivo</h2>
+      <div id="logBox" class="log-panel">
+        <div class="log-row"><span class="log-text info">Inicializando visor de logs en tiempo real...</span></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Dynamically resolve base URL to support double-clicking local file
+    const BASE_URL = window.location.origin.includes('localhost') ? '' : 'http://localhost:3000';
+
+    const statusPulse = document.getElementById('statusPulse');
+    const statusText = document.getElementById('statusText');
+    const simulationToggle = document.getElementById('simulationToggle');
+    const simulationBadge = document.getElementById('simulationBadge');
+    const trendsList = document.getElementById('trendsList');
+    const syncBtn = document.getElementById('syncBtn');
+    const logBox = document.getElementById('logBox');
+
+    // 1. Intercept connection errors and show status
+    let connected = false;
+
+    async function checkServerConnection() {
+      try {
+        const res = await fetch(`${BASE_URL}/api/auth/status`);
+        const data = await res.json();
+        
+        statusPulse.classList.add('active');
+        statusText.textContent = `Online: @${data.username || 'Creator_Simulado'}`;
+        statusText.style.color = '#fff';
+        
+        if (!connected) {
+          console.log('Connected to TikMagicTok Server.');
+          connected = true;
+          loadTrends();
+          checkSimulationStatus();
+        }
+      } catch (err) {
+        statusPulse.classList.remove('active');
+        statusText.textContent = 'Servidor fuera de línea (Iniciar server/index.js)';
+        statusText.style.color = 'var(--error)';
+        connected = false;
+      }
+    }
+
+    // 2. Autopilot Toggle
+    async function checkSimulationStatus() {
+      try {
+        const res = await fetch(`${BASE_URL}/api/simulation/status`);
+        const data = await res.json();
+        simulationToggle.checked = data.active;
+        updateSimulationUI(data.active);
+      } catch (e) {}
+    }
+
+    function updateSimulationUI(active) {
+      if (active) {
+        simulationBadge.textContent = 'Activo';
+        simulationBadge.className = 'status-badge active';
+      } else {
+        simulationBadge.textContent = 'Inactivo';
+        simulationBadge.className = 'status-badge';
+      }
+    }
+
+    simulationToggle.addEventListener('change', async () => {
+      const active = simulationToggle.checked;
+      try {
+        const res = await fetch(`${BASE_URL}/api/simulation/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active })
+        });
+        const data = await res.json();
+        updateSimulationUI(data.active);
+      } catch (e) {
+        simulationToggle.checked = !active;
+      }
+    });
+
+    // 3. Trends List Loader & Poster
+    async function loadTrends() {
+      try {
+        const res = await fetch(`${BASE_URL}/api/trends`);
+        const trends = await res.json();
+        
+        trendsList.innerHTML = '';
+        if (trends.length === 0) {
+          trendsList.innerHTML = '<li class="trend-item" style="color: var(--text-muted);">No hay trends guardados. Sincroniza el feed.</li>';
+          return;
+        }
+
+        trends.forEach(t => {
+          const li = document.createElement('li');
+          li.className = 'trend-item';
+          
+          // Determine friendly category
+          let categoryLabel = 'Entretenimiento';
+          const lower = t.hashtag.toLowerCase();
+          if (lower.includes('tech') || lower.includes('prog')) categoryLabel = 'Tecnología';
+          else if (lower.includes('fit') || lower.includes('gym') || lower.includes('motiv')) categoryLabel = 'Fitness';
+          else if (lower.includes('comed') || lower.includes('funny') || lower.includes('humor')) categoryLabel = 'Comedia';
+          else if (lower.includes('science') || lower.includes('facts') || lower.includes('learn')) categoryLabel = 'Ciencia';
+
+          li.innerHTML = `
+            <div>
+              <span class="trend-name">#${t.hashtag}</span>
+              <span class="trend-category">Categoría: ${categoryLabel}</span>
+            </div>
+            <button class="btn-action" onclick="postTrend(${t.id}, '${t.hashtag}', this)">🎬 Post Now</button>
+          `;
+          trendsList.appendChild(li);
+        });
+      } catch (e) {}
+    }
+
+    async function postTrend(id, hashtag, button) {
+      button.disabled = true;
+      button.textContent = '⏳ Rendering...';
+      try {
+        const res = await fetch(`${BASE_URL}/api/generate-and-publish/${id}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          button.textContent = '✅ Publicado!';
+          button.style.background = 'var(--success)';
+          button.style.color = '#000';
+        } else {
+          button.textContent = '❌ Falló';
+          button.style.background = 'var(--error)';
+          button.style.color = '#fff';
+          setTimeout(() => {
+            button.disabled = false;
+            button.textContent = '🎬 Post Now';
+            button.style.background = '';
+            button.style.color = '';
+          }, 3000);
+        }
+      } catch (e) {
+        button.disabled = false;
+        button.textContent = '🎬 Post Now';
+      }
+    }
+
+    syncBtn.addEventListener('click', async () => {
+      syncBtn.disabled = true;
+      syncBtn.textContent = '🔄 Sincronizando...';
+      try {
+        await fetch(`${BASE_URL}/api/trends/fetch`, { method: 'POST' });
+        await loadTrends();
+      } catch(e) {}
+      syncBtn.disabled = false;
+      syncBtn.textContent = '🔄 Sincronizar Feed';
+    });
+
+    // 4. Real-time log streaming
+    let lastLogLength = 0;
+    
+    async function streamLogs() {
+      try {
+        const res = await fetch(`${BASE_URL}/api/logs`);
+        const logs = await res.json();
+        
+        if (logs.length !== lastLogLength) {
+          logBox.innerHTML = '';
+          logs.forEach(log => {
+            const row = document.createElement('div');
+            row.className = 'log-row';
+            
+            // Format dynamic tags for cleaner looks
+            let customClass = 'info';
+            if (log.text.includes('successfully') || log.text.includes('Publicado') || log.text.includes('completed')) customClass = 'success';
+            if (log.text.includes('failed') || log.text.includes('Error') || log.text.includes('failed')) customClass = 'error';
+
+            row.innerHTML = `
+              <span class="log-time">[${log.time}]</span>
+              <span class="log-text ${customClass}">${log.text}</span>
+            `;
+            logBox.appendChild(row);
+          });
+          logBox.scrollTop = logBox.scrollHeight;
+          lastLogLength = logs.length;
+        }
+      } catch(e) {}
+    }
+
+    // Interval timers
+    setInterval(checkServerConnection, 2000);
+    setInterval(streamLogs, 1500);
+
+    // Initial run
+    checkServerConnection();
+    streamLogs();
+  </script>
+</body>
+</html>
