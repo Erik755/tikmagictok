@@ -1,0 +1,9 @@
+node_modules/
+db/
+output/
+.env
+.DS_Store
+*.mp4
+*.png
+!templates/*.png
+!scratch/*.png

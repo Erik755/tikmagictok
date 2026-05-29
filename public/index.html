@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikMagicTok – Trend Engine & Auto-Publisher</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="header">
+    <h1>TikMagicTok</h1>
+    <div style="display: flex; align-items: center; gap: 1.5rem;">
+      <div id="authStatusWidget" style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 0.4rem 0.8rem; border-radius: 0.5rem;">
+        <span class="pulse-indicator" id="statusPulse"></span>
+        <span id="statusText" style="color: var(--text-muted); font-weight: 500;">Checking Status...</span>
+      </div>
+      <button id="loginBtn" class="button-primary">Iniciar sesión TikTok</button>
+    </div>
+  </header>
+  
+  <main class="container">
+    <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem;">
+      <section id="simulationCard" class="card" style="border: 1px solid rgba(255, 0, 80, 0.2); box-shadow: 0 0 20px rgba(255, 0, 80, 0.08); padding: 1.5rem 2rem; max-height: unset; margin-bottom: -1rem;">
+        <div class="card-header-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+          <div>
+            <h2 style="font-size: 1.35rem; color: var(--accent-start); font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 0.6rem;">🤖 Simulación Auto-Piloto (Cada 30 Minutos)</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">Genera y publica videos dinámicos, adaptados al trend, con fondos temáticos y movimiento cinético en bucle. <b>Garantiza que nunca se repita un video o trend.</b></p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span id="simulationBadge" class="badge-inactive" style="background: rgba(255, 255, 255, 0.04); color: var(--text-muted); padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.06);">Inactivo</span>
+            <label class="switch">
+              <input type="checkbox" id="simulationToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section id="trendsSection" class="card">
+      <div class="card-header-row">
+        <h2>Daily Trends</h2>
+      </div>
+
+      <ul id="trendsList" class="trend-list">
+        <!-- Rendered dynamically -->
+      </ul>
+    </section>
+    
+    <section id="logSection" class="card">
+      <div class="card-header-row">
+        <h2>Live Operation Log</h2>
+      </div>
+      <div id="logBox" class="log-box"></div>
+    </section>
+  </main>
+  
+  <script src="app.js"></script>
+</body>
+</html>
+
