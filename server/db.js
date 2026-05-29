@@ -29,6 +29,7 @@ const init = () => {
     status TEXT NOT NULL,
     publishedAt TEXT,
     tiktokVideoId TEXT,
+    backgroundUrl TEXT,
     FOREIGN KEY(trendId) REFERENCES trends(id)
   );`;
   const createSettings = `CREATE TABLE IF NOT EXISTS video_settings (
@@ -48,7 +49,14 @@ const init = () => {
   );`;
 
   db.exec(createTrends, (e) => { if (e) console.error(e); });
-  db.exec(createPosts, (e) => { if (e) console.error(e); });
+  db.exec(createPosts, (e) => { 
+    if (e) console.error(e); 
+    else {
+      db.run("ALTER TABLE posts ADD COLUMN backgroundUrl TEXT", [], (err) => {
+        // Ignore column already exists error
+      });
+    }
+  });
   db.exec(createSettings, (e) => {
     if (e) console.error(e);
     else {
@@ -89,12 +97,19 @@ const insertTrend = (trend) => new Promise((resolve, reject) => {
   });
 });
 
-const recordPost = (trendId, videoPath, status, tiktokVideoId = null) => new Promise((resolve, reject) => {
+const recordPost = (trendId, videoPath, status, tiktokVideoId = null, backgroundUrl = null) => new Promise((resolve, reject) => {
   const publishedAt = status === 'published' ? new Date().toISOString() : null;
-  const stmt = db.prepare('INSERT INTO posts (trendId, videoPath, status, publishedAt, tiktokVideoId) VALUES (?,?,?,?,?)');
-  stmt.run([trendId, videoPath, status, publishedAt, tiktokVideoId], function (err) {
+  const stmt = db.prepare('INSERT INTO posts (trendId, videoPath, status, publishedAt, tiktokVideoId, backgroundUrl) VALUES (?,?,?,?,?,?)');
+  stmt.run([trendId, videoPath, status, publishedAt, tiktokVideoId, backgroundUrl], function (err) {
     if (err) reject(err);
     else resolve({ id: this.lastID });
+  });
+});
+
+const getRecentBackgroundUrls = (limit = 25) => new Promise((resolve, reject) => {
+  db.all('SELECT DISTINCT backgroundUrl FROM posts WHERE backgroundUrl IS NOT NULL ORDER BY id DESC LIMIT ?', [limit], (err, rows) => {
+    if (err) reject(err);
+    else resolve(rows.map(r => r.backgroundUrl));
   });
 });
 
@@ -146,6 +161,7 @@ module.exports = {
   updateSettings,
   recordMetrics,
   getAllMetrics,
-  getPostedTrendIds
+  getPostedTrendIds,
+  getRecentBackgroundUrls
 };
 

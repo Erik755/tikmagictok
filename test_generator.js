@@ -8,7 +8,8 @@ const videoGenerator = require('./server/videoGenerator');
   };
 
   try {
-    const videoPath = await videoGenerator.createVideo(mockTrend);
+    const result = await videoGenerator.createVideo(mockTrend);
+    const videoPath = typeof result === 'string' ? result : result.videoPath;
     console.log('✅ Video generated successfully at:', videoPath);
     
     // Extract frame

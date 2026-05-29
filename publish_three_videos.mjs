@@ -45,17 +45,19 @@ function getBrowserWS() {
 
       // Step 1: Render the vertical mobile video with premium overlays
       console.log(`[Step 1] Rendering vertical video for #${trend.hashtag}...`);
-      const videoPath = await createVideo(trend);
+      const resultObj = await createVideo(trend);
+      const videoPath = typeof resultObj === 'string' ? resultObj : resultObj.videoPath;
+      const backgroundUrl = typeof resultObj === 'string' ? null : resultObj.backgroundUrl;
       console.log(`[Step 1] Video rendered successfully at: ${videoPath}`);
 
-      // Step 2: Upload to TikTok Studio via remote control
+      // Step 2: Auto-publishing to TikTok Studio...
       console.log(`[Step 2] Auto-publishing to TikTok Studio...`);
       const caption = `#${trend.hashtag} #TikMagicTok`;
       const result = await uploadVideo(videoPath, caption);
       console.log(`[Step 2] Video ${i + 1} published successfully! Video ID: ${result.id}`);
 
       // Record in SQLite DB
-      await db.recordPost(trend.id, videoPath, 'published', result.id);
+      await db.recordPost(trend.id, videoPath, 'published', result.id, backgroundUrl);
 
       // Wait a moment before the next one
       console.log('Waiting 10 seconds before initiating the next upload...');

@@ -95,14 +95,16 @@ async function runAutoPublishCycle() {
     console.log(`[AI Auto-Publisher] Unique trend selected: #${trend.hashtag}`);
 
     // 2. Generate portrait dynamic video with custom background & kinetic crop motion
-    const videoPath = await videoGenerator.createVideo(trend);
+    const resultObj = await videoGenerator.createVideo(trend);
+    const videoPath = typeof resultObj === 'string' ? resultObj : resultObj.videoPath;
+    const backgroundUrl = typeof resultObj === 'string' ? null : resultObj.backgroundUrl;
     
     // 3. Upload to TikTok autonomously using Chrome browser remote debugging port
     const caption = `#${trend.hashtag} #TikMagicTok #IA_Autonoma #Sigueme`;
     const result = await tiktokApi.uploadVideo(videoPath, caption);
 
     // 4. Record the published post in SQLite DB
-    await db.recordPost(trend.id, videoPath, 'published', result.id);
+    await db.recordPost(trend.id, videoPath, 'published', result.id, backgroundUrl);
     console.log(`[AI Auto-Publisher] Video successfully published! TikTok ID: ${result.id}`);
 
     // 5. Run continuous metric learning optimization
@@ -222,12 +224,13 @@ app.post('/api/generate-and-publish/:trendId', async (req, res) => {
     const trend = await db.getTrendById(trendId);
     if (!trend) return res.status(404).json({ error: 'Trend not found' });
     
-    console.log(`[Server] Generating video for trend #${trend.hashtag}...`);
-    const videoPath = await videoGenerator.createVideo(trend);
+    const resultObj = await videoGenerator.createVideo(trend);
+    const videoPath = typeof resultObj === 'string' ? resultObj : resultObj.videoPath;
+    const backgroundUrl = typeof resultObj === 'string' ? null : resultObj.backgroundUrl;
     
     console.log('[Server] Posting to TikTok via remote browser control...');
     const publishResult = await tiktokApi.uploadVideo(videoPath, `#${trend.hashtag} #TikMagicTok`);
-    await db.recordPost(trendId, videoPath, 'published', publishResult.id);
+    await db.recordPost(trendId, videoPath, 'published', publishResult.id, backgroundUrl);
 
     // Run continuous metric optimization loop to learn from this upload
     console.log('[Server] Running self-learning metrics optimization...');
@@ -268,12 +271,13 @@ cron.schedule('0 * * * *', async () => {
       return;
     }
 
-    console.log(`[AI Autoposter Cron] Generating video for hourly trend #${targetTrend.hashtag}...`);
-    const videoPath = await videoGenerator.createVideo(targetTrend);
+    const resultObj = await videoGenerator.createVideo(targetTrend);
+    const videoPath = typeof resultObj === 'string' ? resultObj : resultObj.videoPath;
+    const backgroundUrl = typeof resultObj === 'string' ? null : resultObj.backgroundUrl;
 
     console.log('[AI Autoposter Cron] Uploading video to TikTok Studio...');
     const result = await tiktokApi.uploadVideo(videoPath, `#${targetTrend.hashtag} #TikMagicTok`);
-    await db.recordPost(targetTrend.id, videoPath, 'published', result.id);
+    await db.recordPost(targetTrend.id, videoPath, 'published', result.id, backgroundUrl);
     
     console.log(`[AI Autoposter Cron] Hourly automated video posted successfully! ID: ${result.id}`);
   } catch (e) {
