@@ -17,6 +17,11 @@ const THEMATIC_POOLS = {
       'El software del mañana se programara solo.',
       'La integracion neuronal artificial esta muy cerca.',
       'Los algoritmos predictivos ya saben que vas a ver.'
+    ],
+    visualPrompts: [
+      'Un plano cinematográfico vertical de un teléfono brillante futurista sobre una mesa de laboratorio oscura con luces de neón cian, hiperrealista, 8k.',
+      'Un programador cyberpunk trabajando frente a multiples pantallas con lineas de codigo brillantes en color cian, alta fidelidad, 8k.',
+      'Una placa de circuito impreso futurista con pulsos de luz de neon aqua corriendo a traves de sus vias, hiperrealista, 8k.'
     ]
   },
   motivacion: {
@@ -34,6 +39,11 @@ const THEMATIC_POOLS = {
       'Los grandes logros nacen de la persistencia.',
       'El fracaso temporal es la escuela del exito.',
       'La disciplina matutina define tus decisiones.'
+    ],
+    visualPrompts: [
+      'Una persona atletica entrenando en un gimnasio cyberpunk oscuro, neon verde brillante, luces de fondo dramaticas, alta fidelidad.',
+      'Una silueta corriendo en la cima de una montaña bajo un cielo estrellado y lineas de energia de neon verde, cinematografico, 8k.',
+      'Un boxeador golpeando un saco de boxeo en un gimnasio retrofuturista con luces de neon verde y humo, hiperrealista.'
     ]
   },
   comedia: {
@@ -51,6 +61,11 @@ const THEMATIC_POOLS = {
       'El sentido del humor es el rasgo mas atractivo.',
       'Las situaciones absurdas son la mejor comedia.',
       'Un dia sin reir es un dia totalmente perdido.'
+    ],
+    visualPrompts: [
+      'Un gato tierno y gracioso usando lentes de sol oscuros, con grafitis de neon rosa y amarillo al fondo, estilo pop art premium.',
+      'Un perrito feliz atrapando una pelota en camara lenta en un jardin futurista con colores vibrantes y neon rosa, hiperrealista.',
+      'Un gatito jugueton enredado en lana brillante de colores neon rosa sobre un fondo pop art retro, 8k.'
     ]
   },
   educacion: {
@@ -68,6 +83,11 @@ const THEMATIC_POOLS = {
       'La geometria sagrada se repite en la naturaleza.',
       'El tiempo transcurre mas lento a nivel del mar.',
       'El agua que bebes es mas antigua que el Sol.'
+    ],
+    visualPrompts: [
+      'Un cosmos giratorio con estrellas brillantes, una nebulosa colorida en espiral y formulas de fisica flotando en el espacio 3D, cinematografico.',
+      'El planeta Tierra rotando majestuosamente en el espacio profundo rodeado de un aura electromagnetica de neon amarillo, 8k.',
+      'Particulas subatomicas girando a alta velocidad en un colisionador de hadrones de neon dorado brillante, estilo abstracto futurista.'
     ]
   },
   entretenimiento: {
@@ -85,6 +105,11 @@ const THEMATIC_POOLS = {
       'El emplatado visual estimula el apetito antes.',
       'La cocina experimental es un arte delicioso.',
       'Los ingredientes frescos transforman cualquier plato.'
+    ],
+    visualPrompts: [
+      'Un primer plano cinematográfico de humo saliendo de una taza de cafe caliente en una cafeteria cyberpunk oscura con luces de neon naranja.',
+      'Vegetales frescos picados saltando en una sarten ardiendo con llamas de neon naranja en una cocina moderna, hiperrealista, 8k.',
+      'Un jugoso bistec chisporroteando en una parrilla caliente rodeado de destellos y brasas de neon naranja brillante, cinematografico.'
     ]
   }
 };
@@ -140,13 +165,14 @@ async function generateThematicContent(hashtag) {
   const localContent = {
     title: pool.titles[Math.floor(Math.random() * pool.titles.length)],
     hook: pool.hooks[Math.floor(Math.random() * pool.hooks.length)],
-    fact: pool.facts[Math.floor(Math.random() * pool.facts.length)]
+    fact: pool.facts[Math.floor(Math.random() * pool.facts.length)],
+    visualPrompt: pool.visualPrompts[Math.floor(Math.random() * pool.visualPrompts.length)]
   };
 
   // Attempt external free Llama3 / HuggingFace AI generation (Zero-Key serverless API)
   try {
     const prompt = `Generate a short TikTok video script details for trend #${hashtag}. Category is ${category}. 
-    Provide exact JSON in this format: {"title": "A short bold title (max 20 chars)", "hook": "A viral hook line (max 50 chars)", "fact": "A short mind-blowing fact (max 50 chars)"} 
+    Provide exact JSON in this format: {"title": "A short bold title (max 20 chars)", "hook": "A viral hook line (max 50 chars)", "fact": "A short mind-blowing fact (max 50 chars)", "visualPrompt": "A highly detailed, cinematic 9:16 vertical image prompt describing the characters, situations, or objects matching the trend hashtag context (max 100 chars)"} 
     All fields in Spanish. No other text, just JSON.`;
 
     const response = await axios.post(
@@ -172,6 +198,7 @@ async function generateThematicContent(hashtag) {
             title: aiJson.title.toUpperCase().slice(0, 24).replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, ''),
             hook: aiJson.hook.slice(0, 52).replace(/'/g, "\\'"),
             fact: aiJson.fact.slice(0, 52).replace(/'/g, "\\'"),
+            visualPrompt: (aiJson.visualPrompt || localContent.visualPrompt).slice(0, 150).replace(/'/g, "\\'"),
             category
           };
         }
@@ -187,6 +214,7 @@ async function generateThematicContent(hashtag) {
     title: localContent.title.toUpperCase(),
     hook: localContent.hook,
     fact: localContent.fact,
+    visualPrompt: `Un plano vertical cinematografico ilustrando #${hashtag} en estilo cyberpunk, 8k, alta fidelidad.`,
     category
   };
 }

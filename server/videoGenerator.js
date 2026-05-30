@@ -10,6 +10,7 @@ ffmpeg.setFfmpegPath(ffmpegStatic);
 
 const db = require('./db');
 const aiService = require('./aiService');
+const aiVisualService = require('./aiVisualService');
 
 // Color accent mappings per category for modern look
 const COLOR_SCHEMES = {
@@ -218,44 +219,63 @@ async function createVideo(trend) {
         }
       }
       
-      const videoFilename = path.basename(selectedVideoUrl);
       const cacheDir = path.resolve(__dirname, '..', 'templates', 'cache');
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
-      
-      const cachedVideoPath = path.join(cacheDir, videoFilename);
-      let localBgPath = cachedVideoPath;
 
-      if (fs.existsSync(cachedVideoPath)) {
-        console.log(`[Video Generator] Loading cinematic video background from local cache: ${videoFilename}`);
-      } else {
-        console.log(`[Video Generator] Cinematic video background not cached. Querying Envato Mixkit...`);
-        try {
-          await downloadBackgroundVideo(selectedVideoUrl, cachedVideoPath);
-          console.log(`[Video Generator] Cinematic video cached successfully: ${videoFilename}`);
-        } catch (downloadErr) {
-          console.warn(`[Video Generator] Envato stock download failed. Generating a mathematically unique cinematic video loop fallback on-the-fly...`);
-          // Generate a randomized, gorgeous Mandelbrot fractal zoom background!
-          const randomX = (-2.0 + Math.random() * 3.2).toFixed(6);
-          const randomY = (-1.2 + Math.random() * 2.4).toFixed(6);
-          const randomIter = Math.floor(100 + Math.random() * 400);
-          
-          const fallbackFilename = `cinematic_fractal_${Date.now()}.mp4`;
-          const fallbackPath = path.join(cacheDir, fallbackFilename);
-          
+      let localBgPath = null;
+      let usingAiVisual = false;
+
+      // Layer 1: Attempt dynamic customized AI Visual generation matching the exact trend copy (DALL-E 3)
+      try {
+        console.log(`[Video Generator] Attempting to generate a custom DALL-E 3 visual matching trend hashtag #${trend.hashtag}...`);
+        const aiVisualFilename = `ai_visual_${Date.now()}.png`;
+        const generatedVisualPath = await aiVisualService.generateTrendVisual(aiContent.visualPrompt, aiVisualFilename);
+        
+        localBgPath = generatedVisualPath;
+        usingAiVisual = true;
+        console.log(`[Video Generator] Successfully generated unique AI portrait background: ${aiVisualFilename}`);
+      } catch (aiErr) {
+        console.log(`[Video Generator] AI visual generation skipped/failed: ${aiErr.message}`);
+        console.log(`[Video Generator] Falling back to Layer 2: Envato Mixkit cinematic stock video loops.`);
+      }
+
+      // Layer 2: Fallback to Mixkit stock videos if AI Visual was not generated
+      if (!usingAiVisual) {
+        const videoFilename = path.basename(selectedVideoUrl);
+        const cachedVideoPath = path.join(cacheDir, videoFilename);
+        localBgPath = cachedVideoPath;
+
+        if (fs.existsSync(cachedVideoPath)) {
+          console.log(`[Video Generator] Loading cinematic video background from local cache: ${videoFilename}`);
+        } else {
+          console.log(`[Video Generator] Cinematic video background not cached. Querying Envato Mixkit...`);
           try {
-            console.log(`[Video Generator] Encoding customized 3D fractal zoom at X:${randomX} Y:${randomY} Iterations:${randomIter}...`);
-            const { execSync } = require('child_process');
-            const FFMPEG_BIN = ffmpegStatic;
+            await downloadBackgroundVideo(selectedVideoUrl, cachedVideoPath);
+            console.log(`[Video Generator] Cinematic video cached successfully: ${videoFilename}`);
+          } catch (downloadErr) {
+            console.warn(`[Video Generator] Envato stock download failed. Falling back to Layer 3: Dynamic Mandelbrot Fractal Zoom...`);
+            // Layer 3: local dynamic math rendering fallback
+            const randomX = (-2.0 + Math.random() * 3.2).toFixed(6);
+            const randomY = (-1.2 + Math.random() * 2.4).toFixed(6);
+            const randomIter = Math.floor(100 + Math.random() * 400);
             
-            // Render a loop matching the required settings duration
-            execSync(`"${FFMPEG_BIN}" -y -f lavfi -i mandelbrot=size=720x1280:rate=25:maxiter=${randomIter}:start_x=${randomX}:start_y=${randomY} -t ${duration} -c:v libx264 -pix_fmt yuv420p "${fallbackPath}"`, { stdio: 'ignore' });
+            const fallbackFilename = `cinematic_fractal_${Date.now()}.mp4`;
+            const fallbackPath = path.join(cacheDir, fallbackFilename);
             
-            localBgPath = fallbackPath;
-            console.log(`[Video Generator] Loop fallback successfully generated! File: ${fallbackFilename}`);
-          } catch (genErr) {
-            console.error(`[Video Generator] Fractal loop generation failed:`, genErr.message);
-            // Absolute emergency fallback to static background
-            localBgPath = path.resolve(__dirname, '..', 'templates', 'background.png');
+            try {
+              console.log(`[Video Generator] Encoding customized 3D fractal zoom at X:${randomX} Y:${randomY} Iterations:${randomIter}...`);
+              const { execSync } = require('child_process');
+              const FFMPEG_BIN = ffmpegStatic;
+              
+              execSync(`"${FFMPEG_BIN}" -y -f lavfi -i mandelbrot=size=720x1280:rate=25:maxiter=${randomIter}:start_x=${randomX}:start_y=${randomY} -t ${duration} -c:v libx264 -pix_fmt yuv420p "${fallbackPath}"`, { stdio: 'ignore' });
+              
+              localBgPath = fallbackPath;
+              console.log(`[Video Generator] Loop fallback successfully generated! File: ${fallbackFilename}`);
+            } catch (genErr) {
+              console.error(`[Video Generator] Fractal loop generation failed:`, genErr.message);
+              // Emergency fallback
+              localBgPath = path.resolve(__dirname, '..', 'templates', 'background.png');
+            }
           }
         }
       }
