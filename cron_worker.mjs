@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import nodeCron from 'node-cron';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
