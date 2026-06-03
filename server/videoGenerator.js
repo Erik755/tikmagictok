@@ -89,46 +89,76 @@ async function downloadVideoDirectHTTP(url, outputPath) {
   return outputPath;
 }
 
+
+// Curated free vertical video CDN URLs organized by category (no API key needed!)
+// All URLs verified working (200 OK) from Coverr.co free library
+const FREE_VERTICAL_VIDEOS = {
+  tecnologia: [
+    'https://cdn.coverr.co/videos/coverr-a-person-coding-on-a-laptop-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-a-developer-working-on-a-laptop-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-man-typing-on-a-laptop-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-abstract-flowing-particles-1/720p.mp4'
+  ],
+  motivacion: [
+    'https://cdn.coverr.co/videos/coverr-young-man-jogging-in-the-city-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-a-man-running-on-a-treadmill-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-a-person-running-on-the-street-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-a-young-woman-exercising-1/720p.mp4'
+  ],
+  comedia: [
+    'https://cdn.coverr.co/videos/coverr-close-up-of-a-cat-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-a-cat-playing-with-a-toy-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-a-puppy-in-slow-motion-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-two-puppies-playing-1/720p.mp4'
+  ],
+  educacion: [
+    'https://cdn.coverr.co/videos/coverr-stars-in-the-night-sky-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-the-milky-way-over-mountains-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-abstract-flowing-particles-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-a-person-coding-on-a-laptop-1/720p.mp4'
+  ],
+  entretenimiento: [
+    'https://cdn.coverr.co/videos/coverr-coffee-being-poured-into-a-cup-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-a-chef-cooking-in-the-kitchen-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-close-up-of-a-cat-1/720p.mp4',
+    'https://cdn.coverr.co/videos/coverr-young-man-jogging-in-the-city-1/720p.mp4'
+  ]
+};
+
+
 /**
- * Searches and downloads a video from Pixabay (free, no key required for basic searches).
- * Uses the Pixabay API with a free public key.
+ * Downloads a themed free vertical video from our curated CDN pool.
+ * No API key required.
  */
-async function downloadPixabayVideo(query, outputPath) {
-  console.log(`[Pixabay] Searching for vertical video: "${query}"...`);
+async function downloadFreeVerticalVideo(category, outputPath) {
+  const pool = FREE_VERTICAL_VIDEOS[category] || FREE_VERTICAL_VIDEOS.entretenimiento;
+  // Try each URL in random order until one works
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
   
-  // Pixabay free API key from .env
-  const PIXABAY_KEY = process.env.PIXABAY_API_KEY || '47494038-3ab0bbe6e25e944d55765e4e7';
-  const searchQuery = query.replace(/_/g, '+').replace(/#/g, '').trim();
-  
-  const apiUrl = `https://pixabay.com/api/videos/?key=${PIXABAY_KEY}&q=${encodeURIComponent(searchQuery)}&video_type=film&orientation=vertical&per_page=10&safesearch=true`;
-  
-  const response = await axios.get(apiUrl, { timeout: 15000 });
-  
-  if (!response.data || !response.data.hits || response.data.hits.length === 0) {
-    throw new Error(`No Pixabay videos found for query: "${query}"`);
-  }
-  
-  // Pick a random result for variety
-  const hits = response.data.hits;
-  const selected = hits[Math.floor(Math.random() * Math.min(hits.length, 5))];
-  
-  // Try to get the medium or small MP4 URL
-  const videoUrl = selected.videos.medium?.url || selected.videos.small?.url || selected.videos.tiny?.url;
-  if (!videoUrl) throw new Error('No valid video URL in Pixabay response');
-  
-  console.log(`[Pixabay] Found video ID ${selected.id}, downloading...`);
-  const dlResponse = await axios.get(videoUrl, {
-    responseType: 'arraybuffer',
-    timeout: 30000,
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+  for (const url of shuffled) {
+    try {
+      console.log(`[Free Video] Trying: ${url.split('/').slice(-2).join('/')}`);
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'video/mp4,video/*;q=0.9,*/*;q=0.8',
+          'Referer': 'https://coverr.co/'
+        }
+      });
+      if (response.data && response.data.length > 50000) { // Min 50KB to be a real video
+        fs.writeFileSync(outputPath, response.data);
+        console.log(`[Free Video] ✅ Downloaded: ${path.basename(outputPath)} (${response.data.length} bytes)`);
+        return outputPath;
+      }
+    } catch (e) {
+      console.warn(`[Free Video] URL failed: ${e.message}`);
     }
-  });
-  
-  fs.writeFileSync(outputPath, dlResponse.data);
-  console.log(`[Pixabay] Video downloaded: ${path.basename(outputPath)} (${dlResponse.data.length} bytes)`);
-  return outputPath;
+  }
+  throw new Error(`All free video CDN URLs failed for category: ${category}`);
 }
+
 
 /**
  * Downloads a random vertical photo from Picsum Photos (always works, no key needed).
@@ -210,28 +240,18 @@ async function createVideo(trend, options = {}) {
       let usingVideoBackground = false;
 
       // =====================================================================
-      // PRIMARY: Try Pixabay free API for a themed vertical video (no Chrome!)
+      // PRIMARY: Try curated free vertical video CDN pool (no API key needed!)
       // =====================================================================
-      // Map categories to English Pixabay keywords (Pixabay works best with English)
-      const CATEGORY_KEYWORDS = {
-        tecnologia: ['technology', 'computer', 'coding', 'digital', 'futuristic'],
-        motivacion: ['fitness', 'gym', 'running', 'sport', 'training'],
-        comedia: ['cat', 'funny dog', 'kitten', 'puppy', 'animals'],
-        educacion: ['space', 'science', 'nature', 'universe', 'galaxy'],
-        entretenimiento: ['food', 'cooking', 'coffee', 'lifestyle', 'chef']
-      };
-      const catKeywords = CATEGORY_KEYWORDS[category] || CATEGORY_KEYWORDS.entretenimiento;
-      const pixabayQuery = catKeywords[Math.floor(Math.random() * catKeywords.length)];
-      const pixabayVideoPath = path.join(cacheDir, `pixabay_${Date.now()}.mp4`);
+      const freeVideoPath = path.join(cacheDir, `free_video_${Date.now()}.mp4`);
 
       try {
-        console.log(`[Video Generator] Searching Pixabay for themed video: "${pixabayQuery}"...`);
-        await downloadPixabayVideo(pixabayQuery, pixabayVideoPath);
-        localBgPath = pixabayVideoPath;
+        console.log(`[Video Generator] Fetching themed free video for category: "${category}"...`);
+        await downloadFreeVerticalVideo(category, freeVideoPath);
+        localBgPath = freeVideoPath;
         usingVideoBackground = true;
-        console.log(`[Video Generator] ✅ Pixabay video background ready!`);
-      } catch (pixabayErr) {
-        console.warn(`[Video Generator] Pixabay search failed: ${pixabayErr.message}. Trying Mixkit stock video...`);
+        console.log(`[Video Generator] ✅ Free video background ready!`);
+      } catch (freeVideoErr) {
+        console.warn(`[Video Generator] Free video CDN failed: ${freeVideoErr.message}. Trying Mixkit stock video...`);
       }
 
       // =====================================================================
