@@ -3,6 +3,9 @@ require('dotenv').config();
 const axios = require('axios');
 const querystring = require('querystring');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const FormData = require('form-data');
 
 // Helper to base64url encode buffers/strings for PKCE
 function base64URLEncode(str) {
@@ -15,7 +18,9 @@ function base64URLEncode(str) {
 // TikTok OAuth v2 endpoints (official and active)
 const AUTH_URL = 'https://www.tiktok.com/v2/auth/authorize/';
 const TOKEN_URL = 'https://open.tiktokapis.com/v2/oauth/token/';
-const UPLOAD_URL = 'https://open.tiktokapis.com/v2/post/publish/video/init/'; // Direct Post v2
+// TikTok Content Posting API v2 endpoints
+const VIDEO_INIT_URL = 'https://open.tiktokapis.com/v2/post/publish/video/init/';
+const VIDEO_STATUS_URL = 'https://open.tiktokapis.com/v2/post/publish/status/fetch/';
 
 /**
  * Redirect user to TikTok OAuth consent screen with PKCE challenge.
@@ -35,7 +40,7 @@ function login(req, res) {
   const params = querystring.stringify({
     client_key: process.env.TIKTOK_CLIENT_ID,
     response_type: 'code',
-    scope: 'user.info.profile,video.publish', // modern v2 scopes
+    scope: 'user.info.profile,video.publish,video.upload', // v2 scopes
     redirect_uri: process.env.TIKTOK_REDIRECT_URI,
     state: 'tikmagictok_state',
     code_challenge: challenge,
@@ -101,171 +106,182 @@ async function callback(req, res) {
   }
 }
 
-async function uploadVideo(videoPath, caption) {
-  const { default: puppeteer } = await import('puppeteer-core');
-  const http = require('http');
+// Upload mutex to prevent concurrent upload collisions
+let _uploadLock = Promise.resolve();
+let _uploadQueueSize = 0;
 
-  function getBrowserWS() {
-    return new Promise((resolve, reject) => {
-      http.get('http://127.0.0.1:9222/json/version', (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            const info = JSON.parse(data);
-            resolve(info.webSocketDebuggerUrl);
-          } catch (e) {
-            reject(new Error('Failed to parse version JSON'));
-          }
-        });
-      }).on('error', reject);
-    });
+async function uploadVideo(videoPath, caption) {
+  if (process.env.SIMULATE_TIKTOK === 'true') {
+    console.log('[TikTok API] (SIMULATION) Simulating video upload for:', videoPath);
+    await new Promise(r => setTimeout(r, 2000));
+    console.log('[TikTok API] (SIMULATION) Simulated video upload completed successfully!');
+    return { id: `v_published_${Date.now()}` };
   }
 
+  // Queue-based mutex: wait for any previous upload to finish before starting
+  _uploadQueueSize++;
+  if (_uploadQueueSize > 1) {
+    console.log(`[TikTok API] ⏳ Upload queued (position ${_uploadQueueSize}). Waiting for previous upload...`);
+  }
+
+  let releaseLock;
+  const myTurn = new Promise(resolve => { releaseLock = resolve; });
+  const previousLock = _uploadLock;
+  _uploadLock = myTurn;
+
   try {
-    console.log(`[TikTok API] Initiating automated upload for: ${videoPath} with caption: "${caption}"`);
-    
-    console.log('[TikTok API] Fetching browser WebSocket endpoint...');
-    const wsUrl = await getBrowserWS();
-    console.log('[TikTok API] WS URL:', wsUrl);
+    await previousLock;
+  } catch (e) {
+    // Previous upload failed, still proceed
+  }
 
-    console.log('[TikTok API] Connecting Puppeteer...');
-    const browser = await puppeteer.connect({
-      browserWSEndpoint: wsUrl,
-      defaultViewport: null
-    });
+  console.log(`[TikTok API] 🔓 Lock acquired. Starting upload for: ${path.basename(videoPath)}`);
 
-    console.log('[TikTok API] Searching for TikTok Studio page...');
-    const pages = await browser.pages();
-    let page = null;
-    for (const p of pages) {
-      if (p.url().includes('tiktok.com')) {
-        page = p;
-        break;
-      }
-    }
-
-    if (!page) {
-      console.log('[TikTok API] No active TikTok tab found. Opening a new tab...');
-      page = await browser.newPage();
-    }
-
-    console.log('[TikTok API] Deciding navigation path...');
-    const onUploadPage = page.url().includes('/upload');
-    if (onUploadPage) {
-      console.log('[TikTok API] Already on upload page. Reloading tab to clear state...');
-      await page.reload({ waitUntil: 'load', timeout: 30000 });
-      await new Promise(r => setTimeout(r, 5000));
-    } else {
-      console.log('[TikTok API] Currently on another tab. Navigating via "+ Cargar" sidebar button click...');
-      await page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button'));
-        const cargarBtn = buttons.find(b => b.innerText.includes('Cargar') || b.textContent.includes('Cargar'));
-        if (cargarBtn) cargarBtn.click();
-      });
-      await new Promise(r => setTimeout(r, 5000));
-      if (!page.url().includes('/upload')) {
-        console.log('[TikTok API] Sidebar click did not navigate. Falling back to direct page.goto...');
-        await page.goto('https://www.tiktok.com/tiktokstudio/upload?from=upload&lang=es-419', { waitUntil: 'load', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 5000));
-      }
-    }
-
-    console.log('[TikTok API] Locating file input element...');
-    let fileInput = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        fileInput = await page.waitForSelector('input[type="file"]', { timeout: 8000 });
-        if (fileInput) {
-          console.log(`[TikTok API] Successfully found file input on attempt ${attempt}`);
-          break;
-        }
-      } catch (e) {
-        console.log(`[TikTok API] Attempt ${attempt} to locate file input failed. Retrying...`);
-        await new Promise(r => setTimeout(r, 2000));
-      }
-    }
-
-    if (!fileInput) {
-      throw new Error('Could not find file input element after 3 attempts');
-    }
-
-    console.log('[TikTok API] Transmitting video binary...');
-    await fileInput.uploadFile(videoPath);
-    console.log('[TikTok API] Video uploaded to browser. Waiting 10 seconds for rendering...');
-    await new Promise(r => setTimeout(r, 10000));
-
-    console.log('[TikTok API] Dismissing welcome modal if present...');
-    await page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const btn = buttons.find(b => b.innerText.includes('Entendido') || b.textContent.includes('Entendido'));
-      if (btn) btn.click();
-    });
-    await new Promise(r => setTimeout(r, 2000));
-
-    console.log('[TikTok API] Locating caption editor...');
-    const editor = await page.waitForSelector('.public-DraftEditor-content[contenteditable="true"]', { timeout: 15000 });
-    if (!editor) {
-      throw new Error('Could not find caption editor');
-    }
-
-    console.log('[TikTok API] Writing caption...');
-    await editor.click();
-    await new Promise(r => setTimeout(r, 500));
-    await page.keyboard.down('Control');
-    await page.keyboard.press('KeyA');
-    await page.keyboard.up('Control');
-    await page.keyboard.press('Backspace');
-    await new Promise(r => setTimeout(r, 1000));
-    await page.keyboard.type(caption);
-    await new Promise(r => setTimeout(r, 2000));
-
-    console.log('[TikTok API] Clicking "Publicar" button...');
-    const clickedPublish = await page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const pubBtn = buttons.find(b => b.innerText === 'Publicar' || b.textContent === 'Publicar');
-      if (pubBtn) {
-        pubBtn.click();
-        return true;
-      }
-      return false;
-    });
-    console.log('[TikTok API] Publish button clicked:', clickedPublish);
-
-    console.log('[TikTok API] Waiting 5 seconds for confirmation popup...');
-    await new Promise(r => setTimeout(r, 5000));
-
-    console.log('[TikTok API] Checking for "Publicar ahora" on confirmation modal...');
-    const clickedConfirm = await page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const confirmBtn = buttons.find(b => b.innerText.includes('Publicar ahora') || b.textContent.includes('Publicar ahora'));
-      if (confirmBtn) {
-        confirmBtn.click();
-        return true;
-      }
-      return false;
-    });
-    console.log('[TikTok API] Confirmation popup clicked:', clickedConfirm);
-
-    console.log('[TikTok API] Finalizing upload (waiting 15s)...');
-    await new Promise(r => setTimeout(r, 15000));
-
-    // Capture visual confirmation screenshot
-    const screenshotPath = `C:\\Users\\esanchez\\.gemini\\antigravity-ide\\brain\\2d3ea27f-c216-423c-9529-67ff8d7f4e98\\scratch\\publish_success_${Date.now()}.png`;
-    await page.screenshot({ path: screenshotPath });
-    console.log('[TikTok API] Saved upload verification screenshot to:', screenshotPath);
-
-    await browser.disconnect();
-    console.log('[TikTok API] Automated video upload completed successfully!');
-    return {
-      id: `v_published_${Date.now()}`
-    };
-  } catch (err) {
-    console.error('[TikTok API] Automated browser upload failed:', err.message);
-    throw new Error(`Browser remote publishing failed: ${err.message}`);
+  try {
+    const result = await _doUploadViaAPI(videoPath, caption);
+    return result;
+  } finally {
+    _uploadQueueSize--;
+    releaseLock();
+    console.log(`[TikTok API] 🔓 Lock released. Queue remaining: ${_uploadQueueSize}`);
   }
 }
 
+/**
+ * Upload video using the official TikTok Content Posting API v2.
+ * This uses DIRECT_POST mode which directly publishes to the creator's profile.
+ * No Chrome/browser automation required.
+ */
+async function _doUploadViaAPI(videoPath, caption) {
+  // Check that we have a valid access token
+  if (!global.tiktokTokens || !global.tiktokTokens.access_token) {
+    throw new Error('No TikTok access token available. Please authenticate via /auth/login first.');
+  }
+
+  const accessToken = global.tiktokTokens.access_token;
+  const videoStats = fs.statSync(videoPath);
+  const videoSize = videoStats.size;
+  const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+  const totalChunkCount = Math.ceil(videoSize / chunkSize);
+
+  console.log(`[TikTok API] Starting Content Posting API v2 upload...`);
+  console.log(`[TikTok API] Video: ${path.basename(videoPath)} | Size: ${(videoSize / 1024 / 1024).toFixed(2)}MB | Chunks: ${totalChunkCount}`);
+
+  // Step 1: Initialize the upload session (DIRECT_POST)
+  console.log('[TikTok API] Step 1: Initializing upload session...');
+  const initPayload = {
+    post_info: {
+      title: caption.slice(0, 2200), // TikTok max caption length
+      privacy_level: 'PUBLIC_TO_EVERYONE',
+      disable_duet: false,
+      disable_comment: false,
+      disable_stitch: false,
+      video_cover_timestamp_ms: 1000
+    },
+    source_info: {
+      source: 'FILE_UPLOAD',
+      video_size: videoSize,
+      chunk_size: chunkSize,
+      total_chunk_count: totalChunkCount
+    }
+  };
+
+  let initResp;
+  try {
+    initResp = await axios.post(VIDEO_INIT_URL, initPayload, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8'
+      }
+    });
+  } catch (err) {
+    const errData = err.response?.data;
+    throw new Error(`TikTok upload init failed: ${JSON.stringify(errData) || err.message}`);
+  }
+
+  const { publish_id, upload_url } = initResp.data?.data || {};
+  if (!publish_id || !upload_url) {
+    throw new Error(`TikTok init response missing publish_id or upload_url: ${JSON.stringify(initResp.data)}`);
+  }
+  console.log(`[TikTok API] ✅ Upload session initialized. Publish ID: ${publish_id}`);
+  console.log(`[TikTok API] Upload URL: ${upload_url}`);
+
+  // Step 2: Upload video file in chunks
+  console.log(`[TikTok API] Step 2: Uploading ${totalChunkCount} chunk(s)...`);
+  const videoBuffer = fs.readFileSync(videoPath);
+
+  for (let chunkIndex = 0; chunkIndex < totalChunkCount; chunkIndex++) {
+    const start = chunkIndex * chunkSize;
+    const end = Math.min(start + chunkSize, videoSize);
+    const chunk = videoBuffer.slice(start, end);
+    const contentRange = `bytes ${start}-${end - 1}/${videoSize}`;
+
+    console.log(`[TikTok API] Uploading chunk ${chunkIndex + 1}/${totalChunkCount} | Range: ${contentRange}`);
+
+    try {
+      await axios.put(upload_url, chunk, {
+        headers: {
+          'Content-Type': 'video/mp4',
+          'Content-Range': contentRange,
+          'Content-Length': chunk.length
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 120000
+      });
+      console.log(`[TikTok API] ✅ Chunk ${chunkIndex + 1}/${totalChunkCount} uploaded successfully`);
+    } catch (chunkErr) {
+      const errData = chunkErr.response?.data;
+      throw new Error(`Chunk ${chunkIndex + 1} upload failed: ${JSON.stringify(errData) || chunkErr.message}`);
+    }
+  }
+
+  console.log('[TikTok API] ✅ All chunks uploaded. Waiting for TikTok to process the video...');
+
+  // Step 3: Poll for publish status
+  let publishStatus = null;
+  let pollAttempts = 0;
+  const maxPollAttempts = 20;
+
+  while (pollAttempts < maxPollAttempts) {
+    await new Promise(r => setTimeout(r, 5000));
+    pollAttempts++;
+
+    try {
+      const statusResp = await axios.post(VIDEO_STATUS_URL,
+        { publish_id },
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8'
+          }
+        }
+      );
+
+      const statusData = statusResp.data?.data;
+      const status = statusData?.status;
+      console.log(`[TikTok API] Poll ${pollAttempts}/${maxPollAttempts}: Status = ${status}`);
+
+      if (status === 'PUBLISH_COMPLETE') {
+        publishStatus = 'success';
+        console.log(`[TikTok API] 🎉 Video published successfully! Publish ID: ${publish_id}`);
+        break;
+      } else if (status === 'FAILED' || status === 'SEND_MEDIA_RESPONSE_ERROR') {
+        const failReason = statusData?.fail_reason || 'Unknown';
+        throw new Error(`TikTok publish failed with status: ${status}, reason: ${failReason}`);
+      }
+      // Statuses like PROCESSING_UPLOAD, PROCESSING_DOWNLOAD continue polling
+    } catch (pollErr) {
+      if (pollErr.message.includes('TikTok publish failed')) throw pollErr;
+      console.warn(`[TikTok API] Poll ${pollAttempts} error (retrying): ${pollErr.message}`);
+    }
+  }
+
+  if (publishStatus !== 'success') {
+    throw new Error(`TikTok video upload timed out after ${maxPollAttempts} polling attempts. Publish ID: ${publish_id}`);
+  }
+
+  return { id: publish_id };
+}
+
 module.exports = { login, callback, uploadVideo };
-
-
